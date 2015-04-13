@@ -1,0 +1,219 @@
+各种语言成分的语法及其翻译方案(示例)
+1. 普通声明语句的翻译
+下面是声明语句的文法：
+P → prog id (input, output) D ; S
+D →D ; D | List : T | proc id D ; S
+List →List1, id | id
+T → integer | real | array C of T1 | T1 | record D
+C → [num] C | ε
+声明语句的翻译模式：
+P→prog id (input, output){offset := 0}D ; S
+D→D ; D
+D→id: T{enter (id.name, T.type, offset); offset:= offset + T.width}
+T→integer{T.type := integer; T.width := 4}
+T→real{T.type :=real; T.width :=8}
+T→array [num] of T1{T.type := array(num.val, T1.type);T.width := num.val×T1.width}
+T→↑T1{T.type := pointer(T1.type); T.width := 4}
+2. 嵌套过程中声明语句的翻译
+嵌套过程声明语句的产生式。
+		P→prog id (input, output) D ; S
+		D→D ; D | id : T | proc id ; D ; S                                        (7.1)
+嵌套过程声明语句的翻译模式：
+P→prog id (input, output) MD;S{addwidth(top(tblptr),top(offset));
+pop(tblptr);pop(offset)}
+M→ε{t := mktable(nil);push(t, tblptr); push(0, offset)}
+D→D1;D2
+D→proc id; N D1 ; S{t:= top(tblptr);addwidth(t, top(offset));pop(tblptr); 
+pop(offset); enterproc(top(tblptr), id.name,t)}
+D →id : T{enter(top(tblptr), id.name, T.type, top(offset));
+top(offset) := top(offset) + T.width}
+N →ε{t:= mktable(top(tblptr)); push(t, tblptr); push(0, offset)}
+3. 记录的翻译
+    下面是生成记录类型的产生式：
+	T→record D end
+生成记录类型的翻译模式：
+T → record L D end {T.type := record(top(tblptr));
+T.width := top(offset);
+pop(tblptr); pop(offset)}
+L →ε{t:= mktable(nil); push(t, tblptr); push(0, offset)}
+4. 赋值语句的翻译
+下面是典型的赋值语句文法：
+S →Left := E
+				E →E1 + E2 | E1 * E2 | - E1 | (E1 ) | Left
+				Left →Elist ] | id
+				Elist →Elist, E | id [E                                         (7.2)
+赋值语句的翻译模式：
+⑴ S→Left:=E{if Left.offset=null then  /*Left是简单变量id*/
+gencode(Left.addr ':=' E.addr);
+else
+gencode(Left.addr '[' Left.offset '] ' ':=' E.addr)} /*Left是数组元素*/
+⑵ E→E1+E2{E.addr:=newtemp;gencode(E.addr ':='E1.addr'+'E2.addr)}
+⑶ E→(E1){E.addr:= E1.addr}
+⑷ E→Left{if Left.offset=null then /*Left是简单id*/
+E.addr:= Left.addr
+else begin           /*Left是数组元素*/
+E.addr:=newtemp;
+gencode(E.addr ':=' Left.addr ' [' Left.offset ']')
+end}
+⑸ Left→Elist]{ Left.addr:=newtemp;        /*Left是数组元素，因此存放基址和位移*/
+Left.offset:=newtemp;
+gencode(Left.addr ':=' c(Elist.array));
+gencode(Left.offset ':=' Elist.addr '*' width(Elist.array))}
+⑹ Left→id{Left.addr:=id.addr; Left.offset:=null}
+⑺ Elist→Elist1, E{t:=newtemp;m:= Elist1.ndim+1;
+gencode(t ':=' Elist1.addr '*' limit(Elist1.array, m)); /*计算em-1×nm */
+gencode(t ':=' t '+' E.addr);                    /* 计算+ im  */
+Elist.array:= Elist1.array;
+Elist.addr:=t;
+Elist.ndim:=m}
+⑻ Elist→id[E {Elist.array:=id.addr; Elist.addr:= E.addr; Elist.ndim:=1}
+5.各种控制结构的翻译
+5.1 布尔表达式的翻译
+布尔表达式的文法为：
+⑴ B→B1 or M B2
+⑵ B→B1 and M B2
+⑶ B→not B1
+⑷ B→(B1)
+⑸ B→E1 relop E2
+⑹ B→true
+⑺ B→false
+⑻ M→ε
+布尔表达式的翻译模式如下所示：
+⑴B→B1 or M B2{ backpatch(B1.falselist, M.quad);
+				B.truelist := merge(B1.truelist, B2.truelist);
+				B.falselist := B2.falselist}
+⑵B→B1 and M B2{backpatch(B1.truelist, M.quad);
+				 B.truelist := B2.truelist;
+				 B.falselist := merge(B1.falselist, B2.falselist)}
+⑶B→not B1{B.truelist := B1.falselist; B.falselist := B1.truelist}
+⑷B→(B1) {B.truelist := B1.truelist; B.falselist := B1.falselist}
+⑸B→E1 relop E2{B.truelist :=makelist(nextquad);
+				 B.falselist := makelist(nextquad+1);
+				 gencode('if' E1.addr relop.opE1.addr 'goto –');
+				 gencode('goto –')}
+⑹B→true{B.truelist := makelist(nextquad); gencode('goto –')}
+⑺B→false{B.falselist := makelist(nextquad); gencode('goto –')}
+⑻M→ε{M.quad := nextquad}
+5.2 常用控制流语句的翻译
+控制流语句if-then，if-then-else和while-do的文法为：
+⑴S→if B then S1
+⑵S→if B then S1 else S2
+⑶S→while B do S1
+⑷S→begin L end
+⑸S→A
+⑹L→L1;S
+⑺L→S                                                               (7.9)
+if-then，if-then-else和while-do语句的翻译模式：
+⑴S→if B then M1 S1 N else M2 S2{backpatch(B.truelist, M1.quad);
+backpatch(B.falselist, M2.quad);
+S.nextlist := merge(S1.nextlist, merge(N.nextlist, S2.nextlist))}
+⑵N→ε{N.nextlist := makelist(nextquad); gencode('goto –')}
+⑶M→ε{M.quad := nextquad}
+⑷S→if B then M S1{backpatch(B.truelist, M.quad);
+S.nextlist := merge(B.falselist, S1.nextlist)}
+⑸S→while M1 B do M2 S1{backpatch(S1.nextlist, M1.quad); 
+backpatch(B.truelist,M2.quad);S.nextlist:=B.falselist; gencode('goto'M1.quad)}
+⑹S→begin L end{S.nextlist:=L.nextlist}
+⑺S→A{S.nextlist := nil}
+⑻L→L1;MS{backpatch(L1.nextlist, M.quad); L.nextlist := S.nextlist}
+⑼L→S{L.nextlist := S.nextlist}
+5.3 for循环语句的翻译
+    for循环语句的文法如下所示：
+S → for id := E1 to E2 step E3 do S1
+for循环语句的翻译模式如下所示：
+S → for id := E1 to E2 step E3 do M S1 {backpatch(S1.nextlist, M.again,);
+gencode(‘goto’, -, -, M.again); S.nextlist := M.again;}
+M→ε {M.addr := entry(id); gencode(‘:=’, E1.addr, -, M.addr); T1:=newtemp;
+gencode(‘:=’, E2.addr, -, T1); T2:=newtemp; gencode(‘:=’, E3.addr, -, T2); q:=nextquad;
+gencode(‘goto’, -, -, q+2); M.again:=q+1; gencode(‘+’, M.addr, T2, M.addr);
+M.nextlist:=nextquad; gencode(‘if’ M.addr ‘>’T1‘goto –’);}
+5.4 repeat语句的翻译
+repeat语句的文法如下所示：
+S→ repeat S1 until B
+Repeat语句的翻译模式如下所示：
+S→repeat M S1until N B{backpatch(B.falselist,M.quad);
+S.nextlist:=B.truelist}
+M→ε{M.quad := nextquad}
+N→ε{backpatch(S1.nextlist, nextquad)}
+6. switch语句的语法制导翻译
+switch语句的文法为：
+				S → switch (E ) Clist
+				Clist→ case V : S Clist | default : S
+switch语句的翻译模式如下所示：
+⑴S→switch (E){i:=0; Si.nextlist:=0; push Si.nextlist; push E.addr; push i; q:=0; push q}
+Clist{pop q;pop i;pop E.addr;pop Si.nextlist;S.nextlist:=merge(Si.nextlist, q); push S.nextlist}
+⑵Clist→case V :{pop q; pop i; i:=i+1; pop E.addr;
+if nextquad ≠0 then backpatch(q, nextquad);
+q:=nextquad;
+gencode(‘if’ E.addr ‘≠’ Vi ‘goto’ Li);
+push E.addr; push i; 
+push q}S{pop q; pop i; pop E.addr; pop Si-1.nextlist;
+p:=nextquad;
+gencode(‘goto -’); gencode(Li‘:’);
+Si.nextlist:=merge(Si.nextlist, p);
+Si.nextlist:=merge(Si.nextlist, Si-1.nextlist);
+push Si.nextlist; push E.addr; push i; push q}Clist
+⑶Clist→default :{pop q; pop i; i:=i+1; pop E.addr;
+if nextquad ≠0 then backpatch(q, nextquad);
+q:=nextquad;
+gencode(‘if’ E.addr ‘≠’ Vi ‘goto’ Vi+1);
+push E.addr; push i;
+push q}S{pop q; pop i; pop E.addr; pop Si-1.nextlist;
+p:=nextquad;
+gencode(‘goto -’); gencode(Li‘:’);
+Si.nextlist:=merge(Si.nextlist, p);
+Si.nextlist:=merge(Si.nextlist, Si-1.nextlist);
+push Si.nextlist; push E.addr; push i; push q}
+7. 过程调用和返回语句的翻译
+    过程调用和返回语句的文法如下所示：
+				S → call id(Elist)
+				Elist →Elist, E | E
+				S → return E
+过程调用语句的翻译模式如下所示：
+⑴ S→call id (Elist) {n :=0; 
+repeat
+n:=n+1；
+从queue的队首取出一个实参地址p;
+			           gencode('param', -, -, p);
+                   until queue为空;
+			      gencode('call', id.addr, n, -)}
+⑵ Elist→Elist, E{将E.addr添加到queue的队尾}
+⑶ Elist→E{初始化queue，然后将E.addr加入到queue的队尾。}
+过程返回语句的翻译模式为：
+S → return E{if 需要返回结果 then gencode(‘:=’, E.addr, -, F);
+gencode(‘ret’, -, -, -)}
+其中，F是存放结果的指定单元，四元式(‘ret’, -, -, -)执行如下操作：
+⑴ 恢复主调程序的寄存器内容；
+⑵ 释放过程运行时所占用的数据区；
+⑶ 按返回地址返回到主调程序。
+8. 输入输出语句的翻译
+带I/O参数的程序语句和输入输出语句的文法如下所示：
+P → prog id (input, output) D ; S
+S → read (List)
+	| readln(List)
+S → write (Elist)
+	| writeln(Elist)
+带I/O参数的程序语句和输入输出语句的翻译方案如下所示：
+P→ prog id (Parlist) M D ; S
+Parlist→ input(ε | , output)
+S→ (read | readln) (N List); {n:=0;
+repeat 
+move(Queue, in);
+gencode(‘par’, ‘in’, -, -);
+n:=n+1;
+until Queue为空;
+gencode(‘call’, ‘SYSIN’, n-1, -);}
+List→id, L (ε|List)
+S→ (write| writeln) (Elist); { n:=0;
+repeat 
+move(Queue, in);
+gencode(‘par’, ‘out’, -, -);
+n:=n+1;
+until Queue为空;
+gencode(‘call’, ‘SYSOUT’, n, ‘w’)}
+/*n为输出参数个数，w是输出操作类型*/
+			EList→E, K (ε|EList)
+M→ε {gencode(‘prog’, id, y, -)} /*y的值表示input，output或两者皆有*/
+N→ε {设置一个语义队列Queue}
+L→ε {T:=entry(id); add(Queue, T)}
+K→ε {T:= E.addr; add(Queue, T)}
