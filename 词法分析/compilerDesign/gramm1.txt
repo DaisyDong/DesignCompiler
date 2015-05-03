@@ -1,0 +1,9 @@
+S' S L R
+= * i
+6
+S'->S
+S->L = R
+S->R
+L->* R
+L->i
+R->L
