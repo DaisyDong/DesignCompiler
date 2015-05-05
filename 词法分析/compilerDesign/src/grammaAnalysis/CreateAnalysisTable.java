@@ -50,6 +50,9 @@ public class CreateAnalysisTable {
 							temp[1] = s2[1]+" "+s1;		//移进已经匹配的符号
 						else
 							temp[1] = s1;
+
+						go1[n][j] = spl[0];
+						System.out.println(n+" go "+j+" go "+go1[n][j]);
 						if(spl.length > 1) {
 							StringBuilder st = new StringBuilder();
 							for(int a = 1;a < spl.length - 1;a++){
@@ -61,14 +64,11 @@ public class CreateAnalysisTable {
 							temp[2] = st.toString(); 
 							it1.add(temp); 
 							go[n][k++] = spl[1];
-							go1[n][j] = spl[1];
-							System.out.println();
 							creatItem(temp,pro,it1);
 							for(int a = 0;a < k;a++)
 								System.out.println(go[n][a]);
 						}
-						else {
-							go1[n][j] = 
+						else { 
 							go[n][k++] = null;
 							temp[2] = null; 
 							it1.add(temp);
@@ -90,8 +90,20 @@ public class CreateAnalysisTable {
 					}
 					else{
 						for(int d = 0;d < k;d++) 
-							go[n][d] = null; 
-						go1[n][j] = null;
+							go[n][d] = null;
+						if(defEqual(it, it1))		//对于之前已经产生的项目集相应的转移函数要做处理
+							go1[j][j] = go1[n][j];	//相等，则自己可以产生自己
+						else {						//不等，则由它可以产生之前的某个项目集
+							int v = 0;
+							for(ArrayList<String[]> it2 : item) {
+								if(defEqual(it2,it1))
+									break;
+								++v;
+							}
+							go1[v][j] = go1[n][j];
+						}
+						go[n][j] = null;
+						
 					}
 						
 				}
@@ -101,7 +113,7 @@ public class CreateAnalysisTable {
 			int c2 = 0;
 			for(c2 = 0;c2 < 40;c2++) {
 				if(go1[c1][c2] != null)
-					System.out.println(c1+" "+c2+" "+go1[c1][c2]);
+					System.out.println(c1+" go "+c2+" go "+go1[c1][c2]);
 			}
 		}
 		//由go函数构造分析表
@@ -128,11 +140,13 @@ public class CreateAnalysisTable {
 						for(x = 0;x < table[0].length;x++)
 							if(table[0][x].equals(st))
 								break;
-						for(y = 0;y < go1[l].length;y++)
-							if(st.equals(go1[l][y]))
+						for(y = 0;y < n;y++)
+							if(st.equals(go1[y][l]))
 								break;
-						if(y != go1[l].length)
-							table[y+1][x] = "S "+l;
+						if(y != n) {
+							table[l+1][x] = "S "+y;
+							System.out.println(y + "   "+ x + "S "+l);
+						}
 						}
 					}
 					else if(p[2] == null) {
@@ -146,7 +160,7 @@ public class CreateAnalysisTable {
 									for(x = 0;x < table[0].length;x++)
 										if(table[0][x].equals(st[i1]))
 											break; 
-									table[l+1][x] = "r "+(y-1); 
+									table[l+1][x] = "r "+ y; 
 								}
 								break;
 							} 

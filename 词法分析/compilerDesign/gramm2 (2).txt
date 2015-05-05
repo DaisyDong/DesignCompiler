@@ -1,0 +1,7 @@
+S' S B
+a b
+4
+S'->S
+S->B B
+B->a B
+B->b

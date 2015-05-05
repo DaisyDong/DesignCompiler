@@ -12,9 +12,14 @@ public class ReadGramm {
 	public static List<String> Var = new ArrayList<String>();	//文法变量
 	public static List<String> End = new ArrayList<String>();	//终结符
 	public static ArrayList<String[]> Pro = new ArrayList<String[]>(); //产生式 
+	public static String[][] table;			//根据文法生成的转移表
 	
 	public static void main(String args[]) {
+		Var = new ArrayList<String>();
+		End = new ArrayList<String>();
+		Pro = new ArrayList<String[]>(); 
 		readGramm();
+		System.out.println(AnalysisGramm.analysisGramm());
 	}
 	public static void readGramm() { 
 	try{
@@ -92,7 +97,7 @@ public class ReadGramm {
 				m--; 
 				r = readGramm.read();
 			}  
-			String[][] table =  CreateAnalysisTable.CreatTable();
+			table =  CreateAnalysisTable.CreatTable();
 			try(PrintStream ps = new PrintStream(new FileOutputStream("AnalysisTable.txt"))){
 				System.setOut(ps);  
 				int a = table[0].length;
@@ -109,10 +114,10 @@ public class ReadGramm {
 			}catch(IOException ex){
 				ex.printStackTrace();
 			}
-			Var = new ArrayList<String>();
-			End = new ArrayList<String>();
-			Pro = new ArrayList<String[]>();
-			n = 0;
+//			Var = new ArrayList<String>();
+//			End = new ArrayList<String>();
+//			Pro = new ArrayList<String[]>();
+//			n = 0;
 		} 
 		r = readGramm.read();	//重新读取
 		if(tag) {
