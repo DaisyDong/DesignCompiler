@@ -21,9 +21,9 @@ public class ReadGramm {
 		readGramm();
 		System.out.println(AnalysisGramm.analysisGramm());
 	}
-	public static void readGramm() { 
+	public static void readGramm() {
 	try{
-		FileReader readGramm = new FileReader("gramm1.txt");
+		FileReader readGramm = new FileReader("gramm2.txt");
 		
 		char[] v = new char[40];
 		char[] e = new char[40];

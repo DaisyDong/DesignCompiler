@@ -6,7 +6,7 @@ public class FindCode {
 	public static void findCode(String word) { 
 		List<List<String>> encodes = LexicalAnalyzer.encode;
 		ListIterator<List<String>> it = encodes.listIterator(); 
-		while(it.hasNext()) { 
+		while(it.hasNext()) {
 			List<String> sigalCode = it.next();  
 			if(sigalCode.contains(word)) {
 				List<String> tokens = new ArrayList<String>(); 

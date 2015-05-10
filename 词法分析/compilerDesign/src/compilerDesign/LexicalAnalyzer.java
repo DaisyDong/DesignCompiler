@@ -17,9 +17,9 @@ public class LexicalAnalyzer {
 	public static int[] BrackTag = new int[] {0,0,0,0,0,0};
 	public static char[] Brack = new char[] {'(',')','[',']','{','}','\'','\'','\"','\"'};
 	public static boolean full = false;
-	public static void main(String args[]) throws IOException{
+	public static List<List<String>> getToken() throws IOException{
 		initEncodeTable();	//初始化编码表   
-		FileReader readSource = new FileReader("SourceCode.txt");
+		FileReader readSource = new FileReader("SourceCode2.txt");
 		int n = readSource.read(buffer,0,2046); 
 		if(n != 0){
 			buffer[n] = '￥';	//标记数组的结尾
@@ -95,7 +95,9 @@ public class LexicalAnalyzer {
 		}
 		//判断错误信息
 		defineErroInfo();
-		readSource.close();
+		readSource.close();  
+		System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
+		return token;
 		} 
 		private static void defineErroInfo() {
 			try(PrintStream ps = new PrintStream(new FileOutputStream("erroInfo.txt")))

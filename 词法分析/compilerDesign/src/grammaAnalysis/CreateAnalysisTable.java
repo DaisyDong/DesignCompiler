@@ -8,7 +8,9 @@ public class CreateAnalysisTable {
 	public static	List<String> end = ReadGramm.End;  
 	public static 	ArrayList<String[]> pro = ReadGramm.Pro;//改变产生式形式
 	public static String[][] go = new String[40][40];	
-	public static String[][] go1 = new String[40][40];//用于记录go函数的转移情况
+	//记录每一个之后还需要继续规约的产生式,用于之后查找产生式
+	public static String[][] express = new String[40][40]; 
+	public static String[][] go1 = new String[40][40];//用于记录go函数的转移情况 
 	public static int k = 0;	//代表每个项目集中的项目个数
 	public static int n = 0;	//代表项目集的序号
 	public static String[][] CreatTable() {	//返回生成的表 
@@ -18,10 +20,11 @@ public class CreateAnalysisTable {
 		str[0] = pro.get(0)[0]; //代表产生式的产生符
 		str[1] = null;				//代表已经被推出的符号
 		str[2] = pro.get(0)[2];	//代表还未被推出的符号  
-		go[n][k++] = str[2].split(" ")[0]; 
+		go[n][k++] = str[2].split(" ")[0];
+//		express[n][k++] = "#";
 		str[3] = "#";				//代表后面的搜索符
 		it.add(str);	//得到第一个扩展的产生式 
-		creatItem(str,pro,it);//产生第一个项目集  
+		creatItem(str,it);//产生第一个项目集  
 		item.add(it);
 		it = item.get(0);
 		int c = 0;
@@ -30,11 +33,11 @@ public class CreateAnalysisTable {
 		++n;	//下一个项目集
 		int j = 0;
 		j = n - 1;  
-		do { 
+		do {
 			it = item.get(j);   
 			int i = 0;
 			while(go[j][i] != null) {
-				String s1 = go[j][i++];	
+				String s1 = go[j][i];	
 				int m = 0;
 				k = 0;
 				ArrayList<String[]> it1 = new ArrayList<String[]>();
@@ -62,14 +65,16 @@ public class CreateAnalysisTable {
 							if(spl.length >= 2)
 								st.append(spl[spl.length - 1]);
 							temp[2] = st.toString(); 
+//							temp[3] = express[j][i];	//first集等于上一个产生推出它的式子产生的first集
 							it1.add(temp); 
 							go[n][k++] = spl[1];
-							creatItem(temp,pro,it1);
-							for(int a = 0;a < k;a++)
-								System.out.println(go[n][a]);
+							if(var.contains(spl[1]))	//只有产生的是非终结符才会继续有闭包产生
+								creatItem(temp,it1);	//first集只有在这里面才需要算，因为是在同一个闭包中的
+//							for(int a = 0;a < k;a++)
+//								System.out.println(go[n][a]);
 						}
 						else { 
-							go[n][k++] = null;
+							go[n][k] = null;
 							temp[2] = null; 
 							it1.add(temp);
 						}
@@ -79,7 +84,7 @@ public class CreateAnalysisTable {
 				if(it1 != null) {
 					if(!defContain(item,it1)) {	//可能有循环产生或者之前有产生一样的
 					item.add(it1);
-					ArrayList<String[]> it3 = item.get(n); 
+					ArrayList<String[]> it3 = item.get(n);
 					int mx = 0; 
 					while(it3.size() - mx > 0) {
 						String[] p = it3.get(mx++);
@@ -91,8 +96,10 @@ public class CreateAnalysisTable {
 					else{
 						for(int d = 0;d < k;d++) 
 							go[n][d] = null;
-						if(defEqual(it, it1))		//对于之前已经产生的项目集相应的转移函数要做处理
+						if(defEqual(it, it1)) {//对于之前已经产生的项目集相应的转移函数要做处理
 							go1[j][j] = go1[n][j];	//相等，则自己可以产生自己
+							System.out.println(j + "go" + j +"go" + go1[j][j]);
+						}
 						else {						//不等，则由它可以产生之前的某个项目集
 							int v = 0;
 							for(ArrayList<String[]> it2 : item) {
@@ -101,19 +108,27 @@ public class CreateAnalysisTable {
 								++v;
 							}
 							go1[v][j] = go1[n][j];
+							System.out.println(v + "go" + j +"go" + go1[v][j]);
 						}
-						go[n][j] = null;
-						
+						//go[n][j] = null; 
 					}
 						
 				}
+				++i;
 			} 
 		} while(++j < n);
 		for(int c1 = 0;c1 < n;c1++) {
 			int c2 = 0;
 			for(c2 = 0;c2 < 40;c2++) {
 				if(go1[c1][c2] != null)
-					System.out.println(c1+" go "+c2+" go "+go1[c1][c2]);
+					System.out.println(c2+" go "+c1+" go "+go1[c1][c2]);
+			}
+		}
+		for(ArrayList<String[]> ss : item) {
+			int x = 0;
+			while(ss.size() - x > 0) {
+				String[] p = ss.get(x++);
+				System.out.println(p[0]+"->"+p[1]+"."+p[2]+","+p[3]);
 			}
 		}
 		//由go函数构造分析表
@@ -124,10 +139,11 @@ public class CreateAnalysisTable {
 		table[0][i++] = "#";
 		int a = 1;
 		while(var.size() - a > 0) 
-			table[0][i++] = var.get(a++); 
-		for(int l = 0;l < n;l++) {
-			System.out.println(l);
-			ArrayList<String[]> it1 = item.get(l); 
+			table[0][i++] = var.get(a++);
+		int l = -1;
+		for(ArrayList<String[]> it1 : item) {
+			l++;
+			System.out.println("第" + l + "个项目集："); 
 			int m = 0; 
 			while(it1.size() - m > 0) {
 				String[] p = it1.get(m++);
@@ -145,7 +161,7 @@ public class CreateAnalysisTable {
 								break;
 						if(y != n) {
 							table[l+1][x] = "S "+y;
-							System.out.println(y + "   "+ x + "S "+l);
+//							System.out.println(y + "   "+ x + "S "+l);
 						}
 						}
 					}
@@ -215,30 +231,30 @@ public class CreateAnalysisTable {
 		return false;
 	}
 	//用于找到first集
-	public static String findFirst(ArrayList<String[]> pro,String str) { 
-			String[] s;
-			int count = 0;
+	public static List<String> findFirst(String str) { 
+			String[] s; 
+			List<String> first = new ArrayList<String>();	//用于存储一个符号在扩广文法中能产生的所有的first符号
 			String st = new String();
 			st = str;
-			if(var.contains(str)) {
+			while(var.contains(st)) {	//是非终结符，继续查找
 				int m = 0;
 				while(pro.size() - m > 0) { 
 					if(pro.get(m)[0].equals(st)) {	//有由该变量符产生的产生式
 						s = pro.get(m)[2].split(" "); 
 						System.out.println(s[0]);
-						if(count == 0) {	//有多个first
-							str = s[0];
-						}  
-						else
-							str += " "+s[0];
-						++count;
-					}
-					++m;
+						if(end.contains(s[0])) {	//first的前提：是终结符
+							 first.add(s[0]);
+							 ++m;
+						 }
+						else{ 
+							st = s[0]; 
+							break;
+						}
+					} 
 				}
-				str = str + " #";
 			}
-			else str += " #";
-			return str;  
+			first.add(st);	//是终结符
+		return first;  
 } 
 public static boolean isContains(String[][] go,int n,int k,String str) {
 	for(int i = 0;i < k;i++) 
@@ -247,70 +263,59 @@ public static boolean isContains(String[][] go,int n,int k,String str) {
 	return false;
 } 
 
-//由得到的一个项目和一个先起产生式、以及一个正在生成的项目集
-public static ArrayList<String[]> creatItem(String[] str,ArrayList<String[]> its,ArrayList<String[]> it) {
+//同一个闭包中，需要考虑first集
+//由一个先起产生式(即：是哪一个来产生，用于确定first集)、上一项目集以及一个正在生成的项目集
+public static ArrayList<String[]> creatItem(String[] str,ArrayList<String[]> it) {
 	String[] s = str[2].split(" ");
-	ArrayList<String[]> next = new ArrayList<String[]>();
+	ArrayList<String[]> next = new ArrayList<String[]>();	//确定闭包的生成
 	next.add(str);
 	int t = 1;
 	int e = 1;
 	do{						//得到I0项目集
 	if(s != null && var.contains(s[0])) {	//第一个符号是变量符，所以要么是从原始符号表中出现要么从上一级中进行移进后出现
-		int m = 0;
-		int x = 0;
+		int m = 0; 
 		String te = s[0]; 
-		while(its.size() - m > 0) {
+		while(pro.size() - m > 0) {
 			boolean tag = false; 
 			String[] s1 = new String[4];  
 			String[] s2 = new String[4];
-			String tt = its.get(m)[0];
+			String tt = pro.get(m)[0];
 			if(te.equals(tt)) {
-				s1 = its.get(m);
-				tag = true; 
-			} 
-//			else if(its.size() - m == 1 && !pro.equals(its)) { 
-//				String tp;
-//				while(pro.size() - x > 0) {
-//					tp = pro.get(x)[0];
-//					if(te.equals(tp)) {
-//						s1 = pro.get(x++); 
-//						tag = true;
-//						flag = true;
-//						break;
-//					}
-//					++x;
-//				} 
-//			}
-//			if(pro.size() == x || !flag)	//原始产生式中没有相匹配的
-//				++m;
+				s1 = pro.get(m);
+				tag = true;
+			}  
 			if(tag) {	//有由该变量符产生的产生式 
+				List<String> first = new ArrayList<String>();
 				s2[0] = s1[0];
 				s2[1] = s1[1];
 				s2[2] = s1[2];
-				//求搜索符 
-				if(s.length > 1) {
-//					if(flag)
-//						s2[3] = findFirst(pro,s[1]);
-//					else
-						s2[3] = findFirst(its,s[1]);
-				}
-				else s2[3] = str[3]; 
+				//求搜索符  
+				if(s.length > 1)	
+					first = findFirst(s[1]);
+				else first.add(str[3]);	
+				for(String st : first){
+					//对于有多个搜索符，则对每个搜索符都要生成相应一个产生式（项目）
+					s2[3] = st;
 				if(s1[2] != null) { //即新生成的项目是否还能生成新的生成式
 					String s3 = s1[2].split(" ")[0];
-					if(s3 != null && !isContains(go,n,k,s3)) {
-						go[n][k++] = s1[2].split(" ")[0];	//保存所有的下一个要推的X
-						if(var.contains(s3) && !next.contains(s1)) {
-							next.add(s2);
-							t++;
-						}
+					if(s3 != null && !isContains(go,n,k,s3)) { 
+						String[] temp = s1[2].split(" ");
+						go[n][k++] = temp[0];	//保存所有的下一个要推出的表达式的符号
 					}
+					if(var.contains(s3) && !nextCont(next,s2)) {//如果是非终结符则在这个项目集中还能依靠其生产别的产生式
+						next.add(s2);
+						t++; 
+					} 
 					System.out.println(n+" "+k+" "+s1[2].split(" ")[0]);
 					//s = s1[2].split(" ");	//还能由它产生新的产生式
 				}
 				//else
 					//s = null; 
-				it.add(s2);
-				System.out.println(s2[0]+","+s2[1]+","+s2[2]+","+s2[3]); 
+				if(!nextCont(it,s2)) {
+					it.add(s2);
+					System.out.println(s2[0]+","+s2[1]+","+s2[2]+","+s2[3]);
+				}
+				}
 			}  
 			++m;
 		}
@@ -325,5 +330,22 @@ public static ArrayList<String[]> creatItem(String[] str,ArrayList<String[]> its
 	} while(true);
 	
 	return it;
-}
+} 
+
+public static boolean nextCont(ArrayList<String[]> next,String[] s) {
+	for(String[] temp : next) {
+		int c = 0;
+		for(String st : temp) {
+			if(st == null) {
+				if(s[c] != null) break;
+			}
+			else{
+				if(!st.equals(s[c])) break; 
+			}
+			++c;
+		}
+		if(c == 4) return true;
+	}
+	return false;
+} 
 }
