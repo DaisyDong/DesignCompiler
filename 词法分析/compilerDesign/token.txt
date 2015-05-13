@@ -1,6 +1,8 @@
 token×Ö£º
+[LR_BRAC, null]
 [INT_NUMBER, 12]
 [PLUS, null]
-[INT_NUMBER, 24]
+[INT_NUMBER, 14]
+[RR_BRAC, null]
 [MULTI, null]
-[INT_NUMBER, 20]
+[INT_NUMBER, 2]

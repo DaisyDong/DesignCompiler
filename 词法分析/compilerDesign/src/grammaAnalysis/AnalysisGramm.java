@@ -17,7 +17,7 @@ public class AnalysisGramm {
 		stack2.push("#");
 		int x = 0;
 		int y = 0; 
-		String p = input.get(y);
+		String p = input.get(0);
 		x = findVar(p);
 		String state = table[stack1.peek()][x];
 		
@@ -76,20 +76,20 @@ public class AnalysisGramm {
 			token = LexicalAnalyzer.getToken();
 			for(List<String>str : token) {
 				String temp = str.get(0);
-				//list.add(temp);
-				if(str.get(0).equals("ID")) { 
-					 list.add(str.get(1));
-				}
-				else {
-					int x = 0;
-					while(encodes.size() - x >= 0) {
-						List<String> sigalCode = encodes.get(x++);  
-						if(sigalCode.contains(temp)) { 
-							list.add(sigalCode.get(0));
-							break;
-						}	 
-					}   
-				} 
+				list.add(temp);
+//				if(str.get(0).equals("ID")) { 
+//					 list.add(str.get(1));
+//				}
+//				else {
+//					int x = 0;
+//					while(encodes.size() - x >= 0) {
+//						List<String> sigalCode = encodes.get(x++);  
+//						if(sigalCode.contains(temp)) { 
+//							list.add(sigalCode.get(0));
+//							break;
+//						}	 
+//					}   
+//				} 
 			}
 			list.add("#");
 		}catch(Exception e) {

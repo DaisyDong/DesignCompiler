@@ -7,10 +7,10 @@ public class CreateAnalysisTable {
 	public static	List<String> var = ReadGramm.Var;
 	public static	List<String> end = ReadGramm.End;  
 	public static 	ArrayList<String[]> pro = ReadGramm.Pro;//改变产生式形式
-	public static String[][] go = new String[40][40];	
+	public static String[][] go = new String[400][400];	
 	//记录每一个之后还需要继续规约的产生式,用于之后查找产生式
-	public static String[][] express = new String[40][40]; 
-	public static String[][] go1 = new String[40][40];//用于记录go函数的转移情况 
+	public static String[][] express = new String[400][400]; 
+	public static String[][] go1 = new String[400][400];//用于记录go函数的转移情况 
 	public static int k = 0;	//代表每个项目集中的项目个数
 	public static int n = 0;	//代表项目集的序号
 	public static String[][] CreatTable() {	//返回生成的表 
@@ -32,16 +32,17 @@ public class CreateAnalysisTable {
 			System.out.println(it.get(c++)[3]);
 		++n;	//下一个项目集
 		int j = 0;
-		j = n - 1;  
-		do {
+		j = n - 1;
+		do {   
 			it = item.get(j);   
 			int i = 0;
 			while(go[j][i] != null) {
+				String pr = new String();
 				String s1 = go[j][i];	
 				int m = 0;
 				k = 0;
 				ArrayList<String[]> it1 = new ArrayList<String[]>();
-				while(it.size() - m > 0) { 
+				while(it.size() - m > 0) {
 					String[] s2 = it.get(m++);
 					String[] temp = new String[4]; 
 					if(s2[2] != null) {
@@ -54,8 +55,9 @@ public class CreateAnalysisTable {
 						else
 							temp[1] = s1;
 
-						go1[n][j] = spl[0];
-						System.out.println(n+" go "+j+" go "+go1[n][j]);
+						//go1[n][j] = spl[0];
+						pr = spl[0];	//由父项目集推导产生子项目集的符号，由于还没有确定是否能够成功产生所以还不能直接赋值防止将之前的覆盖
+						System.out.println(n+" 1go "+j+" go "+go1[n][j]);
 						if(spl.length > 1) {
 							StringBuilder st = new StringBuilder();
 							for(int a = 1;a < spl.length - 1;a++){
@@ -89,7 +91,8 @@ public class CreateAnalysisTable {
 					while(it3.size() - mx > 0) {
 						String[] p = it3.get(mx++);
 						System.out.println(p[0]+","+p[1]+","+p[2]+","+p[3]);
-					}  
+					}   
+					go1[n][j] = pr;
 					System.out.println(n);
 					++n; 
 					}
@@ -97,8 +100,8 @@ public class CreateAnalysisTable {
 						for(int d = 0;d < k;d++) 
 							go[n][d] = null;
 						if(defEqual(it, it1)) {//对于之前已经产生的项目集相应的转移函数要做处理
-							go1[j][j] = go1[n][j];	//相等，则自己可以产生自己
-							System.out.println(j + "go" + j +"go" + go1[j][j]);
+							go1[j][j] = pr;	//相等，则自己可以产生自己
+							System.out.println(j + "go" + j +"go" + go1[j][j]); 
 						}
 						else {						//不等，则由它可以产生之前的某个项目集
 							int v = 0;
@@ -107,8 +110,10 @@ public class CreateAnalysisTable {
 									break;
 								++v;
 							}
-							go1[v][j] = go1[n][j];
-							System.out.println(v + "go" + j +"go" + go1[v][j]);
+							if(v < item.size()){
+								go1[v][j] = pr;
+								System.out.println(v + "go" + j +"go" + go1[v][j]); 
+							}
 						}
 						//go[n][j] = null; 
 					}
